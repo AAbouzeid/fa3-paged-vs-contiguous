@@ -110,6 +110,7 @@ Then create the environment and build FA3:
 ```bash
 ./install_fa3_env.sh
 source .venv/bin/activate
+python check_env.py
 ```
 
 You do not need to rerun the installer after every login. If the `.venv` directory is still there, just activate it:
@@ -122,6 +123,13 @@ The installer is idempotent: it skips the large PyTorch install if CUDA PyTorch 
 
 ```bash
 REINSTALL=1 ./install_fa3_env.sh
+```
+
+If PyTorch works but FA3 is missing, rebuild only FA3:
+
+```bash
+REINSTALL_FA3=1 ./install_fa3_env.sh
+python check_env.py
 ```
 
 The installer chooses a PyTorch CUDA wheel index from `nvidia-smi`:
