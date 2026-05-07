@@ -132,7 +132,7 @@ REINSTALL_FA3=1 ./install_fa3_env.sh
 python check_env.py
 ```
 
-The installer chooses a PyTorch CUDA wheel index from `nvidia-smi`:
+The installer chooses a PyTorch CUDA wheel index from `nvcc --version` first, because FA3 is compiled locally and PyTorch must match the CUDA toolkit used by `nvcc`. If `nvcc` cannot be queried, it falls back to `nvidia-smi`:
 
 - CUDA 13.x -> `https://download.pytorch.org/whl/cu130`
 - CUDA 12.8/12.9 -> `https://download.pytorch.org/whl/cu128`
@@ -142,6 +142,12 @@ Override if needed:
 
 ```bash
 PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu130 ./install_fa3_env.sh
+```
+
+If FA3 fails with a CUDA mismatch like `detected CUDA version (12.8) mismatches PyTorch (13.0)`, reinstall Torch to match `nvcc`:
+
+```bash
+REINSTALL_TORCH=1 REINSTALL_FA3=1 PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128 ./install_fa3_env.sh
 ```
 
 FA3 is built from the upstream FlashAttention `hopper` directory. If this fails on DGX Spark, that is likely an FA3/Hopper-vs-Blackwell compatibility issue rather than a benchmark issue.

@@ -32,12 +32,17 @@ if ! command -v nvcc >/dev/null 2>&1; then
 fi
 
 if [[ -z "${PYTORCH_INDEX_URL:-}" ]]; then
-  cuda_from_smi=""
+  cuda_from_nvcc=""
+  if command -v nvcc >/dev/null 2>&1; then
+    cuda_from_nvcc="$(nvcc --version 2>/dev/null | sed -n 's/.*release \([0-9.]*\),.*/\1/p' | head -1)"
+  fi
+
   if command -v nvidia-smi >/dev/null 2>&1; then
     cuda_from_smi="$(nvidia-smi 2>/dev/null | sed -n 's/.*CUDA Version: \([0-9.]*\).*/\1/p' | head -1)"
   fi
+  cuda_for_torch="${cuda_from_nvcc:-${cuda_from_smi:-}}"
 
-  case "${cuda_from_smi}" in
+  case "${cuda_for_torch}" in
     13.*)
       PYTORCH_INDEX_URL="https://download.pytorch.org/whl/cu130"
       ;;
@@ -56,6 +61,7 @@ fi
 echo "Using Python: ${PYTHON_BIN}"
 echo "Using venv: ${VENV_DIR}"
 echo "Using PyTorch index: ${PYTORCH_INDEX_URL}"
+echo "Using nvcc: $(nvcc --version | sed -n 's/.*release \([0-9.]*\),.*/\1/p' | head -1)"
 echo "Using MAX_JOBS=${MAX_JOBS} for FA3 build"
 echo "Using REINSTALL_TORCH=${REINSTALL_TORCH}, REINSTALL_FA3=${REINSTALL_FA3}"
 
@@ -63,7 +69,7 @@ echo "Using REINSTALL_TORCH=${REINSTALL_TORCH}, REINSTALL_FA3=${REINSTALL_FA3}"
 # shellcheck disable=SC1091
 source "${VENV_DIR}/bin/activate"
 
-python -m pip install --upgrade pip setuptools wheel
+python -m pip install --upgrade pip "setuptools<82" wheel
 if [[ "${REINSTALL_TORCH}" == "1" ]] || ! python - <<'PY'
 try:
     import torch
@@ -72,7 +78,11 @@ except Exception:
     raise SystemExit(1)
 PY
 then
-  python -m pip install --upgrade torch --index-url "${PYTORCH_INDEX_URL}"
+  if [[ "${REINSTALL_TORCH}" == "1" ]]; then
+    python -m pip install --force-reinstall torch --index-url "${PYTORCH_INDEX_URL}"
+  else
+    python -m pip install --upgrade torch --index-url "${PYTORCH_INDEX_URL}"
+  fi
 else
   echo "PyTorch with CUDA is already importable; skipping torch install."
   python - <<'PY'
