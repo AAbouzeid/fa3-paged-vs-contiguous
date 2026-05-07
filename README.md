@@ -112,6 +112,18 @@ Then create the environment and build FA3:
 source .venv/bin/activate
 ```
 
+You do not need to rerun the installer after every login. If the `.venv` directory is still there, just activate it:
+
+```bash
+source .venv/bin/activate
+```
+
+The installer is idempotent: it skips the large PyTorch install if CUDA PyTorch is already importable, and it skips the FA3 build if `flash_attn_interface` is already importable. To force reinstall:
+
+```bash
+REINSTALL=1 ./install_fa3_env.sh
+```
+
 The installer chooses a PyTorch CUDA wheel index from `nvidia-smi`:
 
 - CUDA 13.x -> `https://download.pytorch.org/whl/cu130`
