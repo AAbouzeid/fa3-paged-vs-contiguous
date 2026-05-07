@@ -1,5 +1,7 @@
-torch
-
-# Install FlashAttention-3 from the Dao-AILab/flash-attention hopper package.
-# The benchmark requires:
-#   from flash_attn_interface import flash_attn_with_kvcache
+# Build/runtime helpers for FlashAttention-3.
+#
+# Install PyTorch separately with the CUDA wheel index that matches your machine.
+# See README.md or run ./install_fa3_env.sh.
+packaging
+psutil
+ninja

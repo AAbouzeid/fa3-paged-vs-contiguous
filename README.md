@@ -23,12 +23,51 @@ from flash_attn_interface import flash_attn_with_kvcache
 
 DGX Spark should run the same code path. If FA3 cannot launch on its GB10 Blackwell GPU, the script exits with device and FA3 error metadata instead of producing fallback data.
 
+## Install
+
+Use `python3` on Ubuntu/DGX Spark. The plain `python` command may not exist until a virtual environment is active.
+
+First make sure basic system tools exist:
+
+```bash
+python3 --version
+nvidia-smi
+nvcc --version
+```
+
+If `venv`, `git`, or compiler tooling is missing on Ubuntu:
+
+```bash
+sudo apt-get update
+sudo apt-get install -y python3-venv git build-essential
+```
+
+Then create the environment and build FA3:
+
+```bash
+./install_fa3_env.sh
+source .venv/bin/activate
+```
+
+The installer chooses a PyTorch CUDA wheel index from `nvidia-smi`:
+
+- CUDA 13.x -> `https://download.pytorch.org/whl/cu130`
+- CUDA 12.8/12.9 -> `https://download.pytorch.org/whl/cu128`
+- CUDA 12.6/12.7 -> `https://download.pytorch.org/whl/cu126`
+
+Override if needed:
+
+```bash
+PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu130 ./install_fa3_env.sh
+```
+
+FA3 is built from the upstream FlashAttention `hopper` directory. If this fails on DGX Spark, that is likely an FA3/Hopper-vs-Blackwell compatibility issue rather than a benchmark issue.
+
 ## Quick Subset
 
 Run the same benchmark path on a small grid:
 
 ```bash
-cd experiments/fa3_paged_vs_contiguous
 python bench_fa3_kvcache.py \
   --batch-sizes 1 4 \
   --seq-lens 1024 2048 \
@@ -40,7 +79,6 @@ python bench_fa3_kvcache.py \
 ## Full Grid
 
 ```bash
-cd experiments/fa3_paged_vs_contiguous
 python bench_fa3_kvcache.py \
   --batch-sizes 1 2 4 8 16 32 64 128 \
   --seq-lens 1024 2048 4096 8192 16384 32768 \
