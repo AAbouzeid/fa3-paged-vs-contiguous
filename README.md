@@ -12,6 +12,69 @@ The benchmark is FA3-only. It does not fall back to vLLM, FA2, FA4, Torch SDPA, 
 
 The vLLM RFC discussion asks whether modern FA3 paged attention decode kernels on H100 remove the performance reason for vAttention. Decode is the relevant isolated kernel path because it reads an existing long KV cache for each generated token. This benchmark therefore uses `q_len=1`, an already-populated KV cache, and no new `k`/`v` append.
 
+## What Is Measured
+
+For each `(batch_size, seq_len, page_size)` case, the script creates the same logical tensors for all layouts:
+
+```text
+Q: [batch_size, 1, q_heads, head_dim]
+K: [batch_size, seq_len, kv_heads, head_dim]
+V: [batch_size, seq_len, kv_heads, head_dim]
+```
+
+Defaults match a Llama-style GQA decode shape:
+
+```text
+dtype = bf16
+q_heads = 32
+kv_heads = 8
+head_dim = 128
+causal = true
+```
+
+The three layouts represent the same logical KV contents:
+
+- `contiguous`: passes K/V directly as `[batch_size, seq_len, kv_heads, head_dim]` with `page_table=None`.
+- `paged_identity`: scatters K/V into `[num_blocks, page_size, kv_heads, head_dim]` and uses an ordered `page_table`.
+- `paged_shuffled`: scatters K/V into the same paged shape, but randomly permutes physical block IDs in the `page_table`.
+
+The timed region is only:
+
+```python
+flash_attn_with_kvcache(
+    q,
+    k_cache,
+    v_cache,
+    k=None,
+    v=None,
+    cache_seqlens=seq_len,
+    page_table=page_table_or_none,
+    causal=True,
+)
+```
+
+Timing uses CUDA events after warmup. The output token count is `batch_size` per decode call, so `tokens/sec` is computed from median latency.
+
+## What Is Not Measured
+
+This is intentionally a kernel-layout microbenchmark. It does not measure:
+
+- CUDA VMM mapping overhead from vAttention.
+- vLLM scheduling, block manager, request batching, or prefix-cache logic.
+- prefill or prefix-cache prefill skipping.
+- appending new K/V into the cache during decode.
+- end-to-end serving throughput.
+
+Those are useful follow-up experiments, but this benchmark isolates the specific FA3 contiguous-vs-paged decode question.
+
+## Correctness Checks
+
+Before timing each case, the script checks:
+
+- FA3 output shape is `[batch_size, 1, q_heads, head_dim]`.
+- output contains no NaN/Inf.
+- paged outputs match the contiguous output with relaxed BF16/FP16 tolerance.
+
 ## Requirements
 
 - PyTorch with CUDA.
@@ -96,6 +159,20 @@ python analyze_results.py results/<run>.jsonl
 ```
 
 The analyzer writes `results/<run>_summary.csv` with contiguous latency, paged latency, and paged-overhead percentages.
+
+Key columns:
+
+- `contiguous_median_us`
+- `paged_identity_median_us`
+- `paged_shuffled_median_us`
+- `paged_identity_overhead_pct`
+- `paged_shuffled_overhead_pct`
+
+Interpretation:
+
+- Near-zero overhead means FA3's paged decode path is effectively as fast as contiguous decode for that shape.
+- Higher `paged_identity` overhead suggests page-table/layout overhead in the FA3 kernel.
+- Higher `paged_shuffled` than `paged_identity` suggests physical block ordering/fragmentation matters.
 
 ## Useful Sanity Check
 
