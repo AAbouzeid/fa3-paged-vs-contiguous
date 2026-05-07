@@ -1,0 +1,5 @@
+torch
+
+# Install FlashAttention-3 from the Dao-AILab/flash-attention hopper package.
+# The benchmark requires:
+#   from flash_attn_interface import flash_attn_with_kvcache
