@@ -499,8 +499,9 @@ def main() -> int:
         print("ERROR: CUDA is not available; FA3 decode benchmark requires a CUDA GPU.", file=sys.stderr)
         return 2
 
-    device = torch.device("cuda")
-    torch.cuda.set_device(device)
+    device_index = 0
+    device = torch.device("cuda", device_index)
+    torch.cuda.set_device(device_index)
     dtype = torch_dtype(args.dtype)
 
     try:
@@ -508,7 +509,7 @@ def main() -> int:
     except Exception as exc:
         props = {}
         if torch.cuda.is_available():
-            current_device = torch.device("cuda")
+            current_device = torch.device("cuda", 0)
             device_props = torch.cuda.get_device_properties(current_device)
             props = {
                 "device_name": device_props.name,
