@@ -185,8 +185,10 @@ python bench_fa3_kvcache.py \
   --batch-sizes 1 2 4 8 16 32 64 128 \
   --seq-lens 1024 2048 4096 8192 16384 32768 \
   --page-sizes 16 128 \
-  --warmup 100 \
-  --iters 500
+  --warmup 200 \
+  --iters 1000 \
+  --seed 1234 \
+  --output results/h100_fa3_decode_clean.jsonl
 ```
 
 Results are written under `results/*.jsonl`.
@@ -212,6 +214,35 @@ Interpretation:
 - Near-zero overhead means FA3's paged decode path is effectively as fast as contiguous decode for that shape.
 - Higher `paged_identity` overhead suggests page-table/layout overhead in the FA3 kernel.
 - Higher `paged_shuffled` than `paged_identity` suggests physical block ordering/fragmentation matters.
+
+## Canonical H100 Result
+
+The included H100 run is:
+
+- Raw results: `results/h100_fa3_decode_clean.jsonl`
+- Summary: `results/h100_fa3_decode_clean_summary.csv`
+
+Environment:
+
+```text
+GPU: NVIDIA H100 80GB HBM3
+compute capability: 9.0
+FlashAttention-3: 3.0.0
+PyTorch: 2.11.0+cu128
+dtype: bf16
+q_heads = 32
+kv_heads = 8
+head_dim = 128
+```
+
+Across 96 `(batch_size, seq_len, page_size)` groups, all paged outputs matched the contiguous output under the benchmark tolerance. The measured median-latency overhead was:
+
+| layout | mean overhead | median overhead | max slowdown |
+| --- | ---: | ---: | ---: |
+| `paged_identity` | -0.16% | -0.28% | +3.10% |
+| `paged_shuffled` | +0.58% | +0.51% | +2.86% |
+
+Conclusion: for H100 BF16 decode with `head_dim=128`, native FA3 paged KV-cache decode is effectively tied with contiguous KV-cache decode. These results do not support a meaningful FA3 paged-decode kernel penalty on Hopper; any remaining vAttention motivation would need to come from other kernels, prefill/prefix behavior, memory-management effects, or end-to-end serving behavior.
 
 ## Useful Sanity Check
 

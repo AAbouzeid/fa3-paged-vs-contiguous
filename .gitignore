@@ -1,6 +1,8 @@
 __pycache__/
 *.py[cod]
 .DS_Store
+.venv/
+.deps/
 
 results/*.jsonl
 results/*.csv
