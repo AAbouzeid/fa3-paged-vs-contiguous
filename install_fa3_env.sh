@@ -4,10 +4,11 @@ set -euo pipefail
 PYTHON_BIN="${PYTHON_BIN:-python3}"
 VENV_DIR="${VENV_DIR:-.venv}"
 FLASH_ATTN_REPO_DIR="${FLASH_ATTN_REPO_DIR:-.deps/flash-attention}"
-MAX_JOBS="${MAX_JOBS:-4}"
+MAX_JOBS="${MAX_JOBS:-8}"
 REINSTALL="${REINSTALL:-0}"
 REINSTALL_TORCH="${REINSTALL_TORCH:-${REINSTALL}}"
 REINSTALL_FA3="${REINSTALL_FA3:-${REINSTALL}}"
+MINIMAL_FA3_BUILD="${MINIMAL_FA3_BUILD:-1}"
 
 if ! command -v "${PYTHON_BIN}" >/dev/null 2>&1; then
   echo "ERROR: ${PYTHON_BIN} not found. Install Python 3 first." >&2
@@ -64,6 +65,7 @@ echo "Using PyTorch index: ${PYTORCH_INDEX_URL}"
 echo "Using nvcc: $(nvcc --version | sed -n 's/.*release \([0-9.]*\),.*/\1/p' | head -1)"
 echo "Using MAX_JOBS=${MAX_JOBS} for FA3 build"
 echo "Using REINSTALL_TORCH=${REINSTALL_TORCH}, REINSTALL_FA3=${REINSTALL_FA3}"
+echo "Using MINIMAL_FA3_BUILD=${MINIMAL_FA3_BUILD}"
 
 "${PYTHON_BIN}" -m venv "${VENV_DIR}"
 # shellcheck disable=SC1091
@@ -116,6 +118,22 @@ then
 
   (
     cd "${FLASH_ATTN_REPO_DIR}/hopper"
+    if [[ "${MINIMAL_FA3_BUILD}" == "1" ]]; then
+      export FLASH_ATTENTION_DISABLE_BACKWARD=TRUE
+      export FLASH_ATTENTION_DISABLE_SM80=TRUE
+      export FLASH_ATTENTION_DISABLE_FP16=TRUE
+      export FLASH_ATTENTION_DISABLE_FP8=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIM64=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIM96=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIM192=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIM256=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIMDIFF64=TRUE
+      export FLASH_ATTENTION_DISABLE_HDIMDIFF192=TRUE
+      export FLASH_ATTENTION_DISABLE_APPENDKV=TRUE
+      export FLASH_ATTENTION_DISABLE_LOCAL=TRUE
+      export FLASH_ATTENTION_DISABLE_SOFTCAP=TRUE
+      echo "Building minimal FA3: sm90 BF16 hdim128 forward/paged decode support."
+    fi
     MAX_JOBS="${MAX_JOBS}" python setup.py install
   )
 else

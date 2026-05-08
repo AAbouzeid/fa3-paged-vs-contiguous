@@ -113,6 +113,12 @@ source .venv/bin/activate
 python check_env.py
 ```
 
+By default the installer performs a minimal FA3 build for this experiment: H100/SM90, BF16, head dimension 128, forward-only, with paged KV enabled. This avoids compiling hundreds of unused FA3 variants. To build all FA3 variants instead:
+
+```bash
+MINIMAL_FA3_BUILD=0 ./install_fa3_env.sh
+```
+
 You do not need to rerun the installer after every login. If the `.venv` directory is still there, just activate it:
 
 ```bash
@@ -148,6 +154,13 @@ If FA3 fails with a CUDA mismatch like `detected CUDA version (12.8) mismatches 
 
 ```bash
 REINSTALL_TORCH=1 REINSTALL_FA3=1 PYTORCH_INDEX_URL=https://download.pytorch.org/whl/cu128 ./install_fa3_env.sh
+```
+
+If FA3 compile jobs are killed, lower parallelism and keep the minimal build:
+
+```bash
+rm -rf .deps/flash-attention/hopper/build
+MAX_JOBS=8 REINSTALL_FA3=1 ./install_fa3_env.sh
 ```
 
 FA3 is built from the upstream FlashAttention `hopper` directory. If this fails on DGX Spark, that is likely an FA3/Hopper-vs-Blackwell compatibility issue rather than a benchmark issue.
