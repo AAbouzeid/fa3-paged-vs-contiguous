@@ -242,6 +242,37 @@ Across 96 `(batch_size, seq_len, page_size)` groups, all paged outputs matched t
 | `paged_identity` | -0.16% | -0.28% | +3.10% |
 | `paged_shuffled` | +0.58% | +0.51% | +2.86% |
 
+Breakdown by sequence length:
+
+| seq_len | cases | identity mean | identity median | shuffled mean | shuffled median |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1024 | 16 | +1.45% | +1.51% | +1.71% | +1.90% |
+| 2048 | 16 | +0.76% | +0.20% | +1.05% | +0.76% |
+| 4096 | 16 | -0.09% | -0.06% | +0.54% | +0.54% |
+| 8192 | 16 | -0.56% | -0.54% | +0.32% | +0.24% |
+| 16384 | 16 | -1.05% | -0.66% | +0.09% | +0.20% |
+| 32768 | 16 | -1.46% | -1.00% | -0.24% | +0.19% |
+
+Breakdown by batch size:
+
+| batch_size | cases | identity mean | identity median | shuffled mean | shuffled median |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 1 | 12 | +1.53% | +2.02% | +1.60% | +1.88% |
+| 2 | 12 | +1.14% | +1.08% | +1.33% | +1.40% |
+| 4 | 12 | +0.49% | -0.28% | +0.76% | +0.17% |
+| 8 | 12 | +0.26% | -0.09% | +0.68% | +0.34% |
+| 16 | 12 | -0.06% | -0.02% | +0.69% | +0.60% |
+| 32 | 12 | -0.88% | -1.07% | +0.33% | +0.37% |
+| 64 | 12 | -1.19% | -1.43% | +0.30% | +0.53% |
+| 128 | 12 | -2.56% | -3.23% | -1.07% | -1.14% |
+
+Breakdown by page size:
+
+| page_size | cases | identity mean | identity median | shuffled mean | shuffled median |
+| ---: | ---: | ---: | ---: | ---: | ---: |
+| 16 | 48 | -0.13% | -0.16% | +0.90% | +0.69% |
+| 128 | 48 | -0.19% | -0.36% | +0.26% | +0.14% |
+
 Conclusion: for H100 BF16 decode with `head_dim=128`, native FA3 paged KV-cache decode is effectively tied with contiguous KV-cache decode. These results do not support a meaningful FA3 paged-decode kernel penalty on Hopper; any remaining vAttention motivation would need to come from other kernels, prefill/prefix behavior, memory-management effects, or end-to-end serving behavior.
 
 ## Useful Sanity Check
